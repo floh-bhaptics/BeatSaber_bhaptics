@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32002.261
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeatSaber_bhaptics", "BeatSaber_bhaptics.csproj", "{AB8D52AA-102E-4837-9DA5-024D394B25BB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AB8D52AA-102E-4837-9DA5-024D394B25BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB8D52AA-102E-4837-9DA5-024D394B25BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB8D52AA-102E-4837-9DA5-024D394B25BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB8D52AA-102E-4837-9DA5-024D394B25BB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {84F323D1-B36C-4F79-B293-48056E850D03}
+	EndGlobalSection
+EndGlobal
