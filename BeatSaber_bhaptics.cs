@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 using MelonLoader;
 using HarmonyLib;
@@ -15,7 +16,15 @@ namespace BeatSaber_bhaptics
         public static TactsuitVR tactsuitVr;
         public static Dictionary<BeatmapEventType, string> myEffects = new Dictionary<BeatmapEventType, string>();
         public static List<string> myEffectStrings = new List<string> { "LightEffect1", "LightEffect2", "LightEffect3", "LightEffect4", "LightEffect5", "LightEffect6" };
-
+        public static Stopwatch timerLastEffect = new Stopwatch();
+        public static Stopwatch timerSameTime = new Stopwatch();
+        public static int numberOfEvents = 0;
+        public static int defaultTriggerNumber = 4;
+        public static int currentTriggerNumber = 4;
+        public static List<float> highWeights = new List<float> { };
+        public static float weightFactor = 1.0f;
+        public static bool reducedWeight = false;
+        public static bool ringEffectOff = false;
 
         public override void OnApplicationStart()
         {
@@ -24,6 +33,9 @@ namespace BeatSaber_bhaptics
             tactsuitVr.PlaybackHaptics("HeartBeat");
         }
 
+        #region Player effects
+
+        /*
         [HarmonyPatch(typeof(MissedNoteEffectSpawner), "HandleNoteWasMissed", new Type[] { typeof(NoteController) })]
         public class bhaptics_NoteMissed
         {
@@ -43,7 +55,7 @@ namespace BeatSaber_bhaptics
                 tactsuitVr.PlaybackHaptics("ExplosionBelly");
             }
         }
-        /*
+        
         [HarmonyPatch(typeof(NoteCutter), "Cut", new Type[] { typeof(Saber) })]
         public class bhaptics_NoteCut
         {
@@ -57,7 +69,7 @@ namespace BeatSaber_bhaptics
                 //tactsuitVr.PlaybackHaptics("HeartBeat");
             }
         }
-        */
+        
 
         [HarmonyPatch(typeof(LevelFailedTextEffect), "ShowEffect", new Type[] {  })]
         public class bhaptics_LevelFailed
@@ -68,6 +80,11 @@ namespace BeatSaber_bhaptics
                 tactsuitVr.PlaybackHaptics("LevelFailed");
             }
         }
+        */
+
+        #endregion
+
+        #region Lighting effects
 
         [HarmonyPatch(typeof(TrackLaneRingsRotationEffect), "SpawnRingRotationEffect", new Type[] {  })]
         public class bhaptics_RingRotationEffect
@@ -75,6 +92,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix()
             {
+                if (ringEffectOff) return;
                 tactsuitVr.PlaySpecialEffect("RingRotation");
             }
         }
@@ -97,24 +115,85 @@ namespace BeatSaber_bhaptics
             {
                 if ((beatmapEventData.type == BeatmapEventType.Special0) | (beatmapEventData.type == BeatmapEventType.Special1) | (beatmapEventData.type == BeatmapEventType.Special2) | (beatmapEventData.type == BeatmapEventType.Special3))
                     tactsuitVr.PlaySpecialEffect("ShockWave");
-                string effectName = "None";
+                
+                // If last effects has been a while, reduce threshold
+                if (!timerLastEffect.IsRunning) timerLastEffect.Start();
+                if (timerLastEffect.ElapsedMilliseconds >= 2000)
+                {
+                    if (currentTriggerNumber > 1) currentTriggerNumber -= 1;
+                    timerLastEffect.Restart();
+                }
+
+                // Count number of effects at the "same time"
+                if (timerSameTime.ElapsedMilliseconds <= 100)
+                {
+                    numberOfEvents += 1;
+                    timerSameTime.Restart();
+                    //tactsuitVr.LOG("Number of events: " + numberOfEvents.ToString());
+                }
+                else
+                {
+                    numberOfEvents = 0;
+                    timerSameTime.Restart();
+                    //tactsuitVr.LOG("Timer reset");
+                }
+
+                // If number of simultaneous events is above threshold, trigger effect
+                if (numberOfEvents >= currentTriggerNumber)
+                {
+                    currentTriggerNumber = defaultTriggerNumber;
+                    string effectName = "None";
+                    float weight = (float)numberOfEvents / (float)defaultTriggerNumber / weightFactor;
+                    tactsuitVr.LOG("Trigger: " + currentTriggerNumber.ToString());
+                    tactsuitVr.LOG("Weight: " + weight.ToString());
+                    if (weight > 1.0f) effectName = "LightEffect3";
+                    if (weight > 1.5f) effectName = "LightEffect2";
+                    if (weight > 2.0f) effectName = "LightEffect1";
+                    if (weight == 1.0f) effectName = "LightEffect4";
+                    if (weight < 1.0) effectName = "LightEffect5";
+                    if (weight < 0.7) effectName = "LightEffect6";
+                    tactsuitVr.PlaySpecialEffect(effectName);
+                    if (weight > 5.0f) highWeights.Add(weight);
+                    if (weight < 0.1f) highWeights.Add(weight);
+                    if (highWeights.Count >= 4)
+                    {
+                        weightFactor = highWeights.Average();
+                        if (weightFactor < 1.0f)
+                        {
+                            if ((!reducedWeight) && (defaultTriggerNumber > 2))
+                            {
+                                defaultTriggerNumber -= 1;
+                                tactsuitVr.LOG("Trigger adjusted! " + defaultTriggerNumber.ToString() + " " + weightFactor.ToString());
+                            }
+                        } else reducedWeight = true;
+                        highWeights.Clear();
+                    }
+                }
+
+                /*
                 if (myEffects.ContainsKey(beatmapEventData.type)) effectName = myEffects[beatmapEventData.type];
                 if (effectName == "None") return;
                 tactsuitVr.PlaySpecialEffect(effectName);
+                */
             }
         }
 
+        #endregion
+
+        #region Map analysis
 
         public static List<BeatmapEventType> getLeastUsedEvents(BeatmapData beatmapData)
         {
             List<BeatmapEventType> myEventTypes = new List<BeatmapEventType>();
             Dictionary<BeatmapEventType, int> allEffects = new Dictionary<BeatmapEventType, int>();
+            numberOfEvents = 0;
             foreach (BeatmapEventData data in beatmapData.beatmapEventsData)
             {
                 if ((data.type == BeatmapEventType.VoidEvent) | (data.type == BeatmapEventType.BpmChange) | (data.type == BeatmapEventType.Special0) | (data.type == BeatmapEventType.Special1) | (data.type == BeatmapEventType.Special2) | (data.type == BeatmapEventType.Special3))
                     break;
                 if (allEffects.ContainsKey(data.type)) allEffects[data.type] += 1;
                 else allEffects.Add(data.type, 1);
+                numberOfEvents += 1;
             }
             int numberOfEffects = 0;
             int numberOfRuns = 0;
@@ -127,9 +206,17 @@ namespace BeatSaber_bhaptics
                 BeatmapEventType minEvent = allEffects.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
                 myEventTypes.Add(minEvent);
                 allEffects.Remove(minEvent);
-                tactsuitVr.LOG("Event: " + minEvent.ToString());
-                tactsuitVr.LOG("Number: " + numberOfEffects.ToString());
+                //tactsuitVr.LOG("Event: " + minEvent.ToString());
+                //tactsuitVr.LOG("Number: " + numberOfEffects.ToString());
             }
+            highWeights.Clear();
+            weightFactor = 1.0f;
+            reducedWeight = false;
+            tactsuitVr.LOG("Events: " + numberOfEvents.ToString());
+            defaultTriggerNumber = numberOfEvents / 500;
+            if (defaultTriggerNumber <= 1) defaultTriggerNumber = 2;
+            currentTriggerNumber = defaultTriggerNumber;
+            tactsuitVr.LOG("DefaulTrigger: " + defaultTriggerNumber.ToString());
             return myEventTypes;
         }
 
@@ -167,7 +254,7 @@ namespace BeatSaber_bhaptics
             }
         }
 
-
+        #endregion
 
     }
 }
