@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
+
 using MelonLoader;
 using HarmonyLib;
 using MyBhapticsTactsuit;
@@ -25,6 +26,7 @@ namespace BeatSaber_bhaptics
         public static float weightFactor = 1.0f;
         public static bool reducedWeight = false;
         public static bool ringEffectOff = false;
+        public static Random rnd = new Random();
 
         public override void OnApplicationStart()
         {
@@ -70,17 +72,19 @@ namespace BeatSaber_bhaptics
             }
         }
         
+        */
 
-        [HarmonyPatch(typeof(LevelFailedTextEffect), "ShowEffect", new Type[] {  })]
-        public class bhaptics_LevelFailed
+        [HarmonyPatch(typeof(LevelCompletionResultsHelper), "ProcessScore", new Type[] { typeof(PlayerData), typeof(PlayerLevelStatsData), typeof(LevelCompletionResults), typeof(IDifficultyBeatmap), typeof(PlatformLeaderboardsModel)})]
+        public class bhaptics_LevelResults
         {
             [HarmonyPostfix]
-            public static void Postfix()
+            public static void Postfix(LevelCompletionResults levelCompletionResults)
             {
-                tactsuitVr.PlaybackHaptics("LevelFailed");
+                if (levelCompletionResults.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared) tactsuitVr.PlaybackHaptics("LevelSuccess");
+                if (levelCompletionResults.levelEndStateType == LevelCompletionResults.LevelEndStateType.Failed) tactsuitVr.PlaybackHaptics("LevelFailed");
+                resetGlobalParameters();
             }
         }
-        */
 
         #endregion
 
@@ -144,17 +148,20 @@ namespace BeatSaber_bhaptics
                     currentTriggerNumber = defaultTriggerNumber;
                     string effectName = "None";
                     float weight = (float)numberOfEvents / (float)defaultTriggerNumber / weightFactor;
-                    tactsuitVr.LOG("Trigger: " + currentTriggerNumber.ToString());
-                    tactsuitVr.LOG("Weight: " + weight.ToString());
+                    //tactsuitVr.LOG("Trigger: " + currentTriggerNumber.ToString());
+                    //tactsuitVr.LOG("Weight: " + weight.ToString());
+                    /*
                     if (weight > 1.0f) effectName = "LightEffect3";
                     if (weight > 1.5f) effectName = "LightEffect2";
                     if (weight > 2.0f) effectName = "LightEffect1";
                     if (weight == 1.0f) effectName = "LightEffect4";
                     if (weight < 1.0) effectName = "LightEffect5";
                     if (weight < 0.7) effectName = "LightEffect6";
+                    */
+                    effectName = myEffectStrings[rnd.Next(myEffectStrings.Count())];
                     tactsuitVr.PlaySpecialEffect(effectName);
                     if (weight > 5.0f) highWeights.Add(weight);
-                    if (weight < 0.1f) highWeights.Add(weight);
+                    if (weight < 0.24f) highWeights.Add(weight);
                     if (highWeights.Count >= 4)
                     {
                         weightFactor = highWeights.Average();
@@ -186,7 +193,7 @@ namespace BeatSaber_bhaptics
         {
             List<BeatmapEventType> myEventTypes = new List<BeatmapEventType>();
             Dictionary<BeatmapEventType, int> allEffects = new Dictionary<BeatmapEventType, int>();
-            numberOfEvents = 0;
+            /*
             foreach (BeatmapEventData data in beatmapData.beatmapEventsData)
             {
                 if ((data.type == BeatmapEventType.VoidEvent) | (data.type == BeatmapEventType.BpmChange) | (data.type == BeatmapEventType.Special0) | (data.type == BeatmapEventType.Special1) | (data.type == BeatmapEventType.Special2) | (data.type == BeatmapEventType.Special3))
@@ -195,6 +202,7 @@ namespace BeatSaber_bhaptics
                 else allEffects.Add(data.type, 1);
                 numberOfEvents += 1;
             }
+            
             int numberOfEffects = 0;
             int numberOfRuns = 0;
             int maxEffects = 300;
@@ -209,18 +217,29 @@ namespace BeatSaber_bhaptics
                 //tactsuitVr.LOG("Event: " + minEvent.ToString());
                 //tactsuitVr.LOG("Number: " + numberOfEffects.ToString());
             }
-            highWeights.Clear();
-            weightFactor = 1.0f;
-            reducedWeight = false;
-            tactsuitVr.LOG("Events: " + numberOfEvents.ToString());
+            */
+            resetGlobalParameters();
+            numberOfEvents = beatmapData.beatmapEventsData.Count();
+            ringEffectOff = (beatmapData.spawnRotationEventsCount > 50);
+            // tactsuitVr.LOG("Events: " + numberOfEvents.ToString());
             defaultTriggerNumber = numberOfEvents / 500;
             if (defaultTriggerNumber <= 1) defaultTriggerNumber = 2;
             currentTriggerNumber = defaultTriggerNumber;
-            tactsuitVr.LOG("DefaulTrigger: " + defaultTriggerNumber.ToString());
+            // tactsuitVr.LOG("DefaultTrigger: " + defaultTriggerNumber.ToString());
             return myEventTypes;
         }
 
-        public static void mapEventTypesToEffects(List<BeatmapEventType> myEventTypes)
+        public static void resetGlobalParameters()
+        {
+            highWeights.Clear();
+            weightFactor = 1.0f;
+            reducedWeight = false;
+            defaultTriggerNumber = 4;
+            currentTriggerNumber = 4;
+            ringEffectOff = false;
+        }
+
+    public static void mapEventTypesToEffects(List<BeatmapEventType> myEventTypes)
         {
             int numberOfEffects = myEffectStrings.Count();
             int counter = 0;
@@ -253,6 +272,18 @@ namespace BeatSaber_bhaptics
                 mapEventTypesToEffects(myEventTypes);
             }
         }
+
+        [HarmonyPatch(typeof(BeatmapDataLoader), "GetBeatmapDataFromBeatmapSaveData", new Type[] { typeof(List<BeatmapSaveData.NoteData>), typeof(List<BeatmapSaveData.WaypointData>), typeof(List<BeatmapSaveData.ObstacleData>), typeof(List<BeatmapSaveData.EventData>), typeof(BeatmapSaveData.SpecialEventKeywordFiltersData), typeof(float), typeof(float), typeof(float) })]
+        public class bhaptics_GetMemoryData
+        {
+            [HarmonyPostfix]
+            public static void Postfix(BeatmapData __result)
+            {
+                List<BeatmapEventType> myEventTypes = getLeastUsedEvents(__result);
+                mapEventTypesToEffects(myEventTypes);
+            }
+        }
+
 
         #endregion
 
