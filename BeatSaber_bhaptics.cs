@@ -15,7 +15,6 @@ namespace BeatSaber_bhaptics
     public class BeatSaber_bhaptics : MelonMod
     {
         public static TactsuitVR tactsuitVr;
-        public static Dictionary<BeatmapEventType, string> myEffects = new Dictionary<BeatmapEventType, string>();
         public static List<string> myEffectStrings = new List<string> { };
         public static Stopwatch timerLastEffect = new Stopwatch();
         public static Stopwatch timerSameTime = new Stopwatch();
@@ -123,8 +122,12 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(BeatmapEventData beatmapEventData)
             {
+                // If it's a "special" effect, just play a pattern
                 if ((beatmapEventData.type == BeatmapEventType.Special0) | (beatmapEventData.type == BeatmapEventType.Special1) | (beatmapEventData.type == BeatmapEventType.Special2) | (beatmapEventData.type == BeatmapEventType.Special3))
+                {
                     tactsuitVr.PlaySpecialEffect(tactsuitVr.myEffectStrings[rnd.Next(myEffectStrings.Count())]);
+                    return;
+                }
                 
                 // If last effects has been a while, reduce threshold
                 if (!timerLastEffect.IsRunning) timerLastEffect.Start();
@@ -139,25 +142,26 @@ namespace BeatSaber_bhaptics
                 {
                     numberOfEvents += 1;
                     timerSameTime.Restart();
-                    //tactsuitVr.LOG("Number of events: " + numberOfEvents.ToString());
                 }
                 else
                 {
                     numberOfEvents = 0;
                     timerSameTime.Restart();
-                    //tactsuitVr.LOG("Timer reset");
                 }
 
                 // If number of simultaneous events is above threshold, trigger effect
                 if (numberOfEvents >= currentTriggerNumber)
                 {
+                    // reset trigger (if it was lowered)
                     currentTriggerNumber = defaultTriggerNumber;
-                    string effectName = "None";
-                    float weight = (float)numberOfEvents / (float)defaultTriggerNumber / weightFactor;
-                    effectName = myEffectStrings[rnd.Next(myEffectStrings.Count())];
+                    string effectName = myEffectStrings[rnd.Next(myEffectStrings.Count())];
                     tactsuitVr.PlaySpecialEffect(effectName);
+
+                    // check if default trigger was set way too high or too low
+                    float weight = (float)numberOfEvents / (float)defaultTriggerNumber / weightFactor;
                     if (weight > 5.0f) highWeights.Add(weight);
                     if (weight < 0.24f) highWeights.Add(weight);
+                    // if this happened 4 times in a row, adjust trigger (only down)
                     if (highWeights.Count >= 4)
                     {
                         weightFactor = highWeights.Average();
@@ -175,25 +179,10 @@ namespace BeatSaber_bhaptics
 
             }
         }
-        
+
         #endregion
 
         #region Map analysis
-
-        public static List<BeatmapEventType> getLeastUsedEvents(BeatmapData beatmapData)
-        {
-            List<BeatmapEventType> myEventTypes = new List<BeatmapEventType>();
-            Dictionary<BeatmapEventType, int> allEffects = new Dictionary<BeatmapEventType, int>();
-            resetGlobalParameters();
-            numberOfEvents = beatmapData.beatmapEventsData.Count();
-            ringEffectOff = (beatmapData.spawnRotationEventsCount > 50);
-            // tactsuitVr.LOG("Events: " + numberOfEvents.ToString());
-            defaultTriggerNumber = numberOfEvents / 500;
-            if (defaultTriggerNumber <= 1) defaultTriggerNumber = 2;
-            currentTriggerNumber = defaultTriggerNumber;
-            // tactsuitVr.LOG("DefaultTrigger: " + defaultTriggerNumber.ToString());
-            return myEventTypes;
-        }
 
         public static void resetGlobalParameters()
         {
@@ -205,16 +194,15 @@ namespace BeatSaber_bhaptics
             ringEffectOff = false;
         }
 
-        public static void mapEventTypesToEffects(List<BeatmapEventType> myEventTypes)
+        public static void analyzeMap(BeatmapData beatmapData)
         {
-            int numberOfEffects = myEffectStrings.Count();
-            int counter = 0;
-            myEffects.Clear();
-            foreach (BeatmapEventType myType in myEventTypes)
-            {
-                myEffects.Add(myType, myEffectStrings[counter % numberOfEffects]);
-                counter++;
-            }
+            // if there are too many ring effects, it gets annoying
+            ringEffectOff = (beatmapData.spawnRotationEventsCount > 50);
+            // count total number of events, estimate trigger number
+            numberOfEvents = beatmapData.beatmapEventsData.Count();
+            defaultTriggerNumber = numberOfEvents / 500;
+            if (defaultTriggerNumber <= 1) defaultTriggerNumber = 2;
+            currentTriggerNumber = defaultTriggerNumber;
         }
 
         [HarmonyPatch(typeof(BeatmapDataLoader), "GetBeatmapDataFromBinary", new Type[] { typeof(byte[]), typeof(float), typeof(float), typeof(float) })]
@@ -223,8 +211,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(BeatmapData __result)
             {
-                List<BeatmapEventType> myEventTypes = getLeastUsedEvents(__result);
-                mapEventTypesToEffects(myEventTypes);
+                analyzeMap(__result);
             }
         }
 
@@ -234,8 +221,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(BeatmapData __result)
             {
-                List<BeatmapEventType> myEventTypes = getLeastUsedEvents(__result);
-                mapEventTypesToEffects(myEventTypes);
+                analyzeMap(__result);
             }
         }
 
@@ -245,8 +231,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(BeatmapData __result)
             {
-                List<BeatmapEventType> myEventTypes = getLeastUsedEvents(__result);
-                mapEventTypesToEffects(myEventTypes);
+                analyzeMap(__result);
             }
         }
 
