@@ -37,7 +37,7 @@ namespace BeatSaber_bhaptics
 
         #region Player effects
 
-        
+        /*
         [HarmonyPatch(typeof(MissedNoteEffectSpawner), "HandleNoteWasMissed", new Type[] { typeof(NoteController) })]
         public class bhaptics_NoteMissed
         {
@@ -72,20 +72,6 @@ namespace BeatSaber_bhaptics
             }
         }
         
-        
-
-        [HarmonyPatch(typeof(LevelCompletionResultsHelper), "ProcessScore", new Type[] { typeof(PlayerData), typeof(PlayerLevelStatsData), typeof(LevelCompletionResults), typeof(IDifficultyBeatmap), typeof(PlatformLeaderboardsModel)})]
-        public class bhaptics_LevelResults
-        {
-            [HarmonyPostfix]
-            public static void Postfix(LevelCompletionResults levelCompletionResults)
-            {
-                if (levelCompletionResults.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared) tactsuitVr.PlaybackHaptics("LevelSuccess");
-                if (levelCompletionResults.levelEndStateType == LevelCompletionResults.LevelEndStateType.Failed) tactsuitVr.PlaybackHaptics("LevelFailed");
-                resetGlobalParameters();
-            }
-        }
-
         [HarmonyPatch(typeof(BeatmapObjectExecutionRatingsRecorder), "Update", new Type[] {  })]
         public class bhaptics_EnergyChange
         {
@@ -99,6 +85,20 @@ namespace BeatSaber_bhaptics
                 }
             }
         }
+        */
+
+        [HarmonyPatch(typeof(LevelCompletionResultsHelper), "ProcessScore", new Type[] { typeof(PlayerData), typeof(PlayerLevelStatsData), typeof(LevelCompletionResults), typeof(IDifficultyBeatmap), typeof(PlatformLeaderboardsModel)})]
+        public class bhaptics_LevelResults
+        {
+            [HarmonyPostfix]
+            public static void Postfix(LevelCompletionResults levelCompletionResults)
+            {
+                if (levelCompletionResults.levelEndStateType == LevelCompletionResults.LevelEndStateType.Cleared) tactsuitVr.PlaybackHaptics("LevelSuccess");
+                if (levelCompletionResults.levelEndStateType == LevelCompletionResults.LevelEndStateType.Failed) tactsuitVr.PlaybackHaptics("LevelFailed");
+                resetGlobalParameters();
+            }
+        }
+
 
 
         #endregion
@@ -115,7 +115,7 @@ namespace BeatSaber_bhaptics
                 tactsuitVr.PlaySpecialEffect("RingRotation");
             }
         }
-        /*
+        
         [HarmonyPatch(typeof(EnvironmentSpawnRotation), "BeatmapEventAtNoteSpawnCallback", new Type[] { typeof(BeatmapEventData)})]
         public class bhaptics_LightChangeEffect
         {
@@ -174,7 +174,7 @@ namespace BeatSaber_bhaptics
 
             }
         }
-        */
+        
         #endregion
 
         #region Map analysis
