@@ -22,6 +22,7 @@ namespace MyBhapticsTactsuit
         private static ManualResetEvent HeartBeat_mrse = new ManualResetEvent(false);
         // dictionary of all feedback patterns found in the bHaptics directory
         public Dictionary<String, FileInfo> FeedbackMap = new Dictionary<String, FileInfo>();
+        public List<string> myEffectStrings = new List<string> { };
 
         private static bHaptics.RotationOption defaultRotationOption = new bHaptics.RotationOption(0.0f, 0.0f);
 
@@ -81,6 +82,11 @@ namespace MyBhapticsTactsuit
                 catch (Exception e) { LOG(e.ToString()); }
 
                 FeedbackMap.Add(prefix, Files[i]);
+                if (prefix.StartsWith("LightEffect"))
+                {
+                    myEffectStrings.Add(prefix);
+                    LOG("Light effect pattern added: " + prefix);
+                }
             }
             systemInitialized = true;
         }
@@ -184,7 +190,7 @@ namespace MyBhapticsTactsuit
 
         public void PlaySpecialEffect(string effect)
         {
-            foreach (string myEffect in BeatSaber_bhaptics.BeatSaber_bhaptics.myEffectStrings)
+            foreach (string myEffect in myEffectStrings)
             {
                 if (IsPlaying(myEffect)) return;
             }

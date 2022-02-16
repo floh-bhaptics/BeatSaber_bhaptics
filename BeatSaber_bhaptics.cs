@@ -16,7 +16,7 @@ namespace BeatSaber_bhaptics
     {
         public static TactsuitVR tactsuitVr;
         public static Dictionary<BeatmapEventType, string> myEffects = new Dictionary<BeatmapEventType, string>();
-        public static List<string> myEffectStrings = new List<string> { "LightEffect1", "LightEffect2", "LightEffect3", "LightEffect4", "LightEffect5", "LightEffect6" };
+        public static List<string> myEffectStrings = new List<string> { };
         public static Stopwatch timerLastEffect = new Stopwatch();
         public static Stopwatch timerSameTime = new Stopwatch();
         public static int numberOfEvents = 0;
@@ -32,6 +32,7 @@ namespace BeatSaber_bhaptics
         {
             base.OnApplicationStart();
             tactsuitVr = new TactsuitVR();
+            myEffectStrings = tactsuitVr.myEffectStrings;
             tactsuitVr.PlaybackHaptics("HeartBeat");
         }
 
@@ -123,7 +124,7 @@ namespace BeatSaber_bhaptics
             public static void Postfix(BeatmapEventData beatmapEventData)
             {
                 if ((beatmapEventData.type == BeatmapEventType.Special0) | (beatmapEventData.type == BeatmapEventType.Special1) | (beatmapEventData.type == BeatmapEventType.Special2) | (beatmapEventData.type == BeatmapEventType.Special3))
-                    tactsuitVr.PlaySpecialEffect(myEffectStrings[rnd.Next(myEffectStrings.Count())]);
+                    tactsuitVr.PlaySpecialEffect(tactsuitVr.myEffectStrings[rnd.Next(myEffectStrings.Count())]);
                 
                 // If last effects has been a while, reduce threshold
                 if (!timerLastEffect.IsRunning) timerLastEffect.Start();
@@ -204,7 +205,7 @@ namespace BeatSaber_bhaptics
             ringEffectOff = false;
         }
 
-    public static void mapEventTypesToEffects(List<BeatmapEventType> myEventTypes)
+        public static void mapEventTypesToEffects(List<BeatmapEventType> myEventTypes)
         {
             int numberOfEffects = myEffectStrings.Count();
             int counter = 0;
