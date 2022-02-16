@@ -37,6 +37,7 @@
     </Reference>
     <Reference Include="GameplayCore">
       <HintPath>D:\Games\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\GameplayCore.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Main">
       <HintPath>D:\Games\Steam\steamapps\common\Beat Saber\Beat Saber_Data\Managed\Main.dll</HintPath>

@@ -188,6 +188,7 @@ namespace MyBhapticsTactsuit
             {
                 if (IsPlaying(myEffect)) return;
             }
+            if (IsPlaying(effect)) return;
             PlaybackHaptics(effect);
         }
 
