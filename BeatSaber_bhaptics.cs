@@ -14,6 +14,9 @@ namespace BeatSaber_bhaptics
 {
     public class BeatSaber_bhaptics : MelonMod
     {
+        // switch from musical to functional mod
+        public static bool musicalMod = true;
+
         public static TactsuitVR tactsuitVr;
         public static List<string> myEffectStrings = new List<string> { };
         public static Stopwatch timerLastEffect = new Stopwatch();
@@ -37,13 +40,14 @@ namespace BeatSaber_bhaptics
 
         #region Player effects
 
-        /*
+        
         [HarmonyPatch(typeof(MissedNoteEffectSpawner), "HandleNoteWasMissed", new Type[] { typeof(NoteController) })]
         public class bhaptics_NoteMissed
         {
             [HarmonyPostfix]
             public static void Postfix()
             {
+                if (musicalMod) return;
                 tactsuitVr.PlaybackHaptics("MissedNote");
             }
         }
@@ -54,6 +58,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix()
             {
+                if (musicalMod) return;
                 tactsuitVr.PlaybackHaptics("ExplosionBelly");
             }
         }
@@ -64,6 +69,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(Saber saber)
             {
+                if (musicalMod) return;
                 bool isRight = false;
                 if (saber.name == "RightSaber") isRight = true;
                 tactsuitVr.Recoil("Blade", isRight);
@@ -78,6 +84,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(BeatmapObjectExecutionRatingsRecorder __instance)
             {
+                if (musicalMod) return;
                 BeatmapObjectExecutionRating lastRating = __instance.beatmapObjectExecutionRatings[__instance.beatmapObjectExecutionRatings.Count() - 1];
                 if (lastRating.beatmapObjectRatingType == BeatmapObjectExecutionRating.BeatmapObjectExecutionRatingType.Obstacle)
                 {
@@ -85,7 +92,7 @@ namespace BeatSaber_bhaptics
                 }
             }
         }
-        */
+        
 
         [HarmonyPatch(typeof(LevelCompletionResultsHelper), "ProcessScore", new Type[] { typeof(PlayerData), typeof(PlayerLevelStatsData), typeof(LevelCompletionResults), typeof(IDifficultyBeatmap), typeof(PlatformLeaderboardsModel)})]
         public class bhaptics_LevelResults
@@ -111,6 +118,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix()
             {
+                if (!musicalMod) return;
                 if (ringEffectOff) return;
                 tactsuitVr.PlaySpecialEffect("RingRotation");
             }
@@ -122,6 +130,7 @@ namespace BeatSaber_bhaptics
             [HarmonyPostfix]
             public static void Postfix(BeatmapEventData beatmapEventData)
             {
+                if (!musicalMod) return;
                 // If it's a "special" effect, just play a pattern
                 if ((beatmapEventData.type == BeatmapEventType.Special0) | (beatmapEventData.type == BeatmapEventType.Special1) | (beatmapEventData.type == BeatmapEventType.Special2) | (beatmapEventData.type == BeatmapEventType.Special3))
                 {
